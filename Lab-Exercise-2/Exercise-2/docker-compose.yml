@@ -1,0 +1,68 @@
+version: '2.1'
+
+volumes:
+  wordpress-data:
+  mysql-data:
+  redis-data:
+
+networks:
+  lab-network:
+    driver: bridge
+
+services:
+  wordpress:
+    image: wordpress
+    ports:
+      - 8080:80
+    environment:
+      WORDPRESS_DB_HOST: database
+      WORDPRESS_DB_USER: testuser
+      WORDPRESS_DB_NAME: testdb
+      WORDPRESS_DB_PASSWORD: password
+      WP_REDIS_HOST: caching
+      WP_REDIS_PORT: 6379
+    restart: always
+    volumes:
+      - wordpress-data:/var/www/html
+    networks:
+      - lab-network
+    depends_on:
+      database:
+        condition: service_healthy
+      caching:
+        condition: service_healthy
+
+  database:
+    image: mysql
+    ports:
+      - 3306:3306
+    restart: always
+    environment:
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: password
+      MYSQL_RANDOM_ROOT_PASSWORD: '1'
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - lab-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  caching:
+    image: redis
+    ports:
+      - 6379:6379
+    restart: always
+    volumes:
+      - redis-data:/data
+    networks:
+      - lab-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
