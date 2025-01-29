@@ -1,0 +1,26 @@
+global:
+  smtp_smarthost: 'smtp.example.com:587'
+  smtp_from:  'alertmanager@example.com'
+  smtp_auth_username: 'user@example.com'
+  smtp_auth_password: 'password'
+  resolve_timeout:  5m
+
+route:
+  group_by: []
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval:  3h
+  receiver: 'email-notification'
+  routes:
+    - match:
+        severity: 'critical'
+      receiver: 'email-notification'
+      continue: true
+
+receivers:
+  - name: 'email-notification'
+    email_configs:
+      -  to: 'pyawinbe@gmail.com'
+
+inhibit_rules:
+

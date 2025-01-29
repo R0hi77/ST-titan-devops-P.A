@@ -1,0 +1,24 @@
+groups:
+  - name: test-alerts
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: avg(rate(node_cpu_seconds_total{mode!="idle"}[10m])) > 0.8
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High CPU Usage"
+          description: "CPU Usage has been above 80% for more than 5 minutes"
+
+  - name: availability-alerts
+    interval: 30s 
+    rules:
+      - alert: InstanceDown
+        expr: up{job="node",instance="node:9100"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Server is down"
+          description: "Server blah blah blah is down"

@@ -1,16 +1,19 @@
 global:
   scrape_interval: 15s
 
+rule_files:
+  - "ST-Lab-Exercises/Lab-Exercise-2/Exercise-3/alertrules.yml"
+
 alerting:
   alertmanagers:
-    static_configs:
-      - targets: ['alertmanager:9093']
+    - static_configs:
+        - targets: ['alertmanager:9093']
 
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
-
+  
   - job_name: 'node'
     static_configs:
       - targets: ['node:9100']
