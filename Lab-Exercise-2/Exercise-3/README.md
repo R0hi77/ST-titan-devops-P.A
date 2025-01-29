@@ -14,6 +14,7 @@ sudo docker container run -d \
 --name prom-monitor \
 -port 9090:9090 \
 -v /promtheus.yml:/etc/prometheus/prometheus.yml
+-v /alertrules.yml:/etc/prometheus/alertrule.yml
 --network prom-network
 ubuntu/prometheus
 ```
@@ -26,10 +27,18 @@ sudo docker container run -d \
 --name grafana-monitor \
 -p 3000:3000 \
 --network prom-network \ 
-grafana/grafana:latest
+grafana/grafana:latest  
 ```
 
+### running alert manager
 
+```
+sudo docker container run -d \
+--name alert-monitor \
+-p 9093:9093 \
+-- network prom-network
+prom/alertmanager:latest
+```
 
 
 ### Bonus: running node exporter container to be monitored by prometheus
