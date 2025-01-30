@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Document</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --secondary-color: #4f46e5;
+            --accent-color: #818cf8;
+            --background-color: #f8fafc;
+            --text-color: #1e293b;
+            --success-color: #22c55e;
+            --danger-color: #ef4444;
+        }
+        
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin-top: 2rem;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            background: white;
+            margin-bottom: 2rem;
+        }
+        
+        .card-title {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+        }
+        
+        #editor-container {
+            height: 400px;
+            border-radius: 0.5rem;
+            border: 2px solid #e2e8f0;
+            margin-bottom: 1rem;
+        }
+        
+        .ql-toolbar.ql-snow {
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            border: none;
+            border-bottom: 2px solid #e2e8f0;
+            background-color: #f8fafc;
+        }
+        
+        .ql-container.ql-snow {
+            border: none;
+            height: calc(400px - 42px);
+        }
+        
+        .flash-messages {
+            margin-bottom: 1rem;
+        }
+        
+        .alert {
+            border: none;
+            border-radius: 0.5rem;
+        }
+        
+        .diff-viewer {
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: #f8fafc;
+            border-radius: 0.5rem;
+            /* Take remaining height */
+            flex: 1;
+            /* Subtract space taken by title */
+            height: calc(100% - 3rem);
+        }
+        
+        .diff-insert {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        
+        .diff-delete {
+            background-color: #fee2e2;
+            color: #991b1b;
+            text-decoration: line-through;
+        }
+        
+        .breadcrumb {
+            background: none;
+            padding: 0;
+            margin-bottom: 1rem;
+        }
+        
+        .breadcrumb-item a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .breadcrumb-item.active {
+            color: var(--text-color);
+        }
+        
+        .version-badge {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+        
+        .sticky-top {
+            position: sticky;
+            top: 1rem;
+        }
+        
+        .equal-height {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .card-body {
+            height: 100%;
+        }
+        
+        .editor-column {
+            width: 55%;
+            padding-right: 1rem;
+        }
+        
+        .diff-column {
+            width: 45%;
+            padding-left: 1rem;
+        }
+        
+        .diff-card {
+            height: 565px; /* Editor height (400px) + title + padding + buttons */
+        }
+        
+        .diff-viewer {
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: #f8fafc;
+            border-radius: 0.5rem;
+            /* Take remaining height, leaving space for title */
+            height: calc(100% - 4rem);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Documents</a></li>
+                <li class="breadcrumb-item active">{{ document.title }}</li>
+            </ol>
+        </nav>
+
+        <!-- Flash Messages -->
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Document Info -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-0">{{ document.title }}</h1>
+                        <p class="text-muted mb-0">
+                            Created {{ document.created_at.strftime('%Y-%m-%d %H:%M') }}
+                            {% if document.parent %}
+                                <span class="version-badge ms-2">Version of {{ document.parent.title }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-primary">Back to Documents</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Editor -->
+            <div class="editor-column">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Edit Document</h5>
+                        <form action="{{ url_for('save_version', doc_id=document.id) }}" method="POST" onsubmit="return prepareContent();">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Title</label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                       value="{{ document.title }} - v{{ document.children|length + 1 if document.children else 1 }}"
+                                       required>
+                            </div>
+                            <div id="editor-container"></div>
+                            <input type="hidden" name="content" id="content">
+                            <button type="submit" class="btn btn-success">Save as New Version</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diff Viewer -->
+            <div class="diff-column">
+                {% if document.parent %}
+                    <div class="card diff-card sticky-top">
+                        <div class="card-body">
+                            <h5 class="card-title">Changes from Original</h5>
+                            <div id="diff-viewer" class="diff-viewer">
+                                Loading changes...
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.quilljs.com/1.3.7/quill.js"></script>
+    <script>
+        const editor = new Quill('#editor-container', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            }
+        });
+
+        // Set initial content
+        editor.root.innerHTML = `{{ document.content|safe }}`;
+
+        function prepareContent() {
+            const content = editor.root.innerHTML.trim();
+            if (!content || content === '<p><br></p>') {
+                alert('Document content cannot be empty');
+                return false;
+            }
+            document.getElementById('content').value = content;
+            return true;
+        }
+
+        {% if document.parent %}
+            // Load diff
+            fetch(`{{ url_for('get_diff', doc_id=document.id) }}`)
+                .then(response => response.json())
+                .then(diffs => {
+                    const diffViewer = document.getElementById('diff-viewer');
+                    diffViewer.innerHTML = '';
+                    
+                    diffs.forEach(diff => {
+                        const span = document.createElement('span');
+                        span.textContent = diff.text;
+                        
+                        if (diff.type === 'insert') {
+                            span.className = 'diff-insert';
+                        } else if (diff.type === 'delete') {
+                            span.className = 'diff-delete';
+                        }
+                        
+                        diffViewer.appendChild(span);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading diff:', error);
+                    document.getElementById('diff-viewer').innerHTML = 'Error loading changes';
+                });
+        {% endif %}
+    </script>
+</body>
+</html>
